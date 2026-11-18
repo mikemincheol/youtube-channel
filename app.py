@@ -86,9 +86,25 @@ if submitted:
         st.stop()
 
     if not response.ok:
-        st.error(f"API 오류 (HTTP {response.status_code})")
-    elif not data.get("items"):
-        st.warning("해당 채널을 찾지 못했습니다. 링크를 다시 확인해 주세요.")
+        message = data.get("error", {}).get("message", "알 수 없는 오류")
+        st.error(f"API 오류 (HTTP {response.status_code}) {message}")
+        st.stop()
 
-    st.subheader("API 응답")
-    st.json(data, expanded=True)
+    items = data.get("items")
+    if not items:
+        st.warning("해당 채널을 찾지 못했습니다. 링크를 다시 확인해 주세요.")
+        st.stop()
+
+    channel = items[0]
+    stats = channel.get("statistics", {})
+
+    def fmt(key):
+        value = stats.get(key)
+        return f"{int(value):,}" if value is not None else "비공개"
+
+    st.subheader(channel.get("snippet", {}).get("title", "채널 이름 없음"))
+
+    col1, col2, col3 = st.columns(3)
+    col1.metric("구독자 수", fmt("subscriberCount"))
+    col2.metric("총 조회수", fmt("viewCount"))
+    col3.metric("영상 수", fmt("videoCount"))
